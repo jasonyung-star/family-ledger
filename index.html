@@ -81,16 +81,16 @@
     #results { margin-bottom:1.2rem; }
 
     /* Summary cards */
-    .stats-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:0.75rem; margin-bottom:1.6rem; }
-    .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1rem 1.2rem; position:relative; overflow:hidden; transition:border-color 0.2s,box-shadow 0.2s; box-shadow:0 1px 3px rgba(139,111,94,0.07); }
+    .stats-row { display:flex; flex-direction:column; gap:0.75rem; }
+    .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:0.9rem 1.1rem; position:relative; overflow:hidden; transition:border-color 0.2s,box-shadow 0.2s; box-shadow:0 1px 3px rgba(139,111,94,0.07); }
     .stat-card::after { content:''; position:absolute; top:0;left:0;right:0;height:3px; background:var(--accent); opacity:0; transition:opacity 0.2s; border-radius:3px 3px 0 0; }
     .stat-card:hover { border-color:var(--accent); box-shadow:0 2px 8px var(--glow); }
     .stat-card:hover::after { opacity:1; }
-    .stat-label { font-size:0.72rem; color:var(--text-dim); margin-bottom:0.35rem; }
-    .stat-value { font-family:'DM Mono',monospace; font-size:1.7rem; font-weight:500; color:var(--accent); line-height:1; }
+    .stat-label { font-size:0.7rem; color:var(--text-dim); margin-bottom:0.3rem; }
+    .stat-value { font-family:'DM Mono',monospace; font-size:1.5rem; font-weight:500; color:var(--accent); line-height:1; }
     .stat-value.green { color:var(--green); }
     .stat-value.yellow { color:var(--yellow); }
-    .stat-unit { font-size:0.66rem; color:var(--text-dim); margin-left:2px; }
+    .stat-unit { font-size:0.62rem; color:var(--text-dim); margin-left:2px; }
 
     /* Progress table */
     .prog-table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; box-shadow:0 1px 4px rgba(139,111,94,0.08); }
@@ -171,12 +171,12 @@
 <body>
 <div class="topbar">
   <span class="topbar-brand">emily_lu</span>
-  <span class="topbar-title">版本：2026/06/06</span>
+  <span class="topbar-title">版本：2026/06/07</span>
 </div>
 <div class="page-body">
 <div class="container">
   <header>
-    <h1>拍攝<span>進度</span></h1>
+    <h1>26FW<span>拍攝進度</span></h1>
   </header>
 
   <div class="main-layout">
@@ -184,19 +184,23 @@
     <div class="content-col">
       <div class="warn-box" id="warnBox">⚠ 上傳的分類與資料庫分類有不符，無基準的分類將以「—」顯示目標套數。</div>
 
-      <!-- Monthly chart (top) -->
+      <!-- Chart + Stats two-column layout -->
       <div id="chartSection" style="display:none;margin-bottom:2rem;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-          <p class="section-label" style="margin-bottom:0">拍樣繳交月份統計（各商品分類款號數）</p>
-        </div>
-        <div class="prog-table-wrap" style="padding:1.2rem 1.4rem;">
-          <canvas id="monthlyChart" height="100"></canvas>
+        <div style="display:grid;grid-template-columns:160px 1fr;gap:1rem;align-items:stretch;">
+
+          <!-- Left: stats cards vertical -->
+          <div id="statsRow" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
+
+          <!-- Right: chart -->
+          <div class="prog-table-wrap" style="padding:1.2rem 1.4rem;">
+            <p style="font-size:0.82rem;font-weight:600;color:var(--text);margin-bottom:1rem;letter-spacing:0.02em;">拍樣拍攝進度</p>
+            <canvas id="monthlyChart"></canvas>
+          </div>
         </div>
       </div>
 
-      <section id="results">
-        <p id="statsTitle" style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;letter-spacing:0.02em;"></p>
-        <div class="stats-row" id="statsRow"></div>
+      <section id="results" style="display:none;">
+        <p id="statsTitle"></p>
       </section>
 
       <!-- 26FW 統計表 -->
@@ -261,11 +265,11 @@
 
 <script>
   const DATABASE = [
-    { category: '女款',   styles: 421, target: 672, dailyDefault: 30 },
-    { category: '男款',   styles: 231, target: 299, dailyDefault: 40 },
+    { category: '女款',   styles: 421, target: 750, dailyDefault: 30 },
+    { category: '男款',   styles: 231, target: 362, dailyDefault: 40 },
     { category: '中性款', styles: 27,  target: 40,  dailyDefault: 30 },
-    { category: '童款',   styles: 294, target: 406, dailyDefault: 33 },
-    { category: 'Baby款', styles: 150, target: 265, dailyDefault: 21 },
+    { category: '童款',   styles: 294, target: 490, dailyDefault: 33 },
+    { category: 'Baby款', styles: 150, target: 306, dailyDefault: 21 },
     { category: '女童款', styles: 1,   target: 2,   dailyDefault: 22 },
   ];
   const DB_MAP = Object.fromEntries(DATABASE.map(d => [d.category, d]));
@@ -327,7 +331,8 @@
 
   function renderDefault() {
     const tbody = document.getElementById('tableBody');
-    tbody.innerHTML = DATABASE.map(d => `
+    const sorted = [...DATABASE].sort((a, b) => b.styles - a.styles);
+    tbody.innerHTML = sorted.map(d => `
       <tr>
         <td>${d.category}</td>
         <td class="num">${d.styles.toLocaleString()}</td>
@@ -456,6 +461,23 @@
 
         const chartData = { monthlyData, monthlyDone, categories };
 
+        // Calculate styles from Excel: C欄=2026秋冬, deduplicate B欄 per D欄商品分類
+        const colC = keys.find(k => /季別/.test(k)) || keys[2];
+        let lastB3 = '', lastC3 = '', lastD4 = '';
+        const stylesMap = {};
+        const seenStylesForCount = {};
+        raw.forEach(row => {
+          if (row[colB] !== '') lastB3 = String(row[colB]).trim();
+          if (row[colC] !== '') lastC3 = String(row[colC]).trim();
+          if (row[colD] !== '') lastD4 = String(row[colD]).trim();
+          if (lastC3 !== '2026秋冬' || !lastB3 || !lastD4) return;
+          if (!seenStylesForCount[lastD4]) seenStylesForCount[lastD4] = new Set();
+          seenStylesForCount[lastD4].add(lastB3);
+        });
+        Object.keys(seenStylesForCount).forEach(cat => {
+          stylesMap[cat] = seenStylesForCount[cat].size;
+        });
+
         let lastA = '', lastD = '';
         const filled = raw.map(row => {
           if (row[colA] !== '') lastA = String(row[colA]).trim();
@@ -473,10 +495,10 @@
         const rows = allCats.map(cat => ({
           category: cat,
           done: agg[cat] || 0,
-          styles: DB_MAP[cat] ? DB_MAP[cat].styles : null,
+          styles: stylesMap[cat] ?? (DB_MAP[cat] ? DB_MAP[cat].styles : null),
           target: DB_MAP[cat] ? DB_MAP[cat].target : null,
           inDB: !!DB_MAP[cat],
-        })).sort((a, b) => (b.done / (b.target || 1)) - (a.done / (a.target || 1)));
+        })).sort((a, b) => (b.styles ?? 0) - (a.styles ?? 0));
 
         const totalDone = rows.reduce((s, r) => s + r.done, 0);
         const overallPct = DB_TOTAL_TARGET > 0 ? Math.round(totalDone / DB_TOTAL_TARGET * 100) : 0;
@@ -697,11 +719,12 @@
 
     // Build worksheet as array of cell objects
     const headers = ['商品分類','款式合計','目標套數','已拍完','完成進度（剩餘）','每日拍攝量','工作天數'];
+    const reorderedRows = dataRows.map(r => [r[0], r[1], r[2], r[3], r[4], r[5], r[6]]);
     const totalRowData = ['合計', DB_TOTAL_STYLES, DB_TOTAL_TARGET, totalDone, DB_TOTAL_TARGET - totalDone, '', totalDays];
 
     const allRows = [
       headers.map(v => ({ v, s: hStyle })),
-      ...dataRows.map(row => row.map(v => ({ v, s: dStyle }))),
+      ...reorderedRows.map(row => row.map(v => ({ v, s: dStyle }))),
       totalRowData.map(v => ({ v, s: tStyle })),
     ];
 
@@ -735,25 +758,59 @@
   }
 
   function render(rows, totalDone, overallPct) {
-    const remaining = DB_TOTAL_TARGET - totalDone;
+    document.getElementById('chartSection').style.display = 'block';
+    const remaining = Math.max(0, DB_TOTAL_TARGET - totalDone);
+    const color = overallPct >= 100 ? '#5a8a6a' : overallPct >= 50 ? '#8b6f5e' : '#b8892a';
+
     document.getElementById('statsRow').innerHTML = `
-      <div class="stat-card">
-        <div class="stat-label">整體完成率</div>
-        <div class="stat-value ${overallPct >= 100 ? 'green' : overallPct >= 50 ? '' : 'yellow'}">${overallPct}<span class="stat-unit">%</span></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">已拍完套數</div>
-        <div class="stat-value green">${totalDone.toLocaleString()}<span class="stat-unit">套</span></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">目標總套數</div>
-        <div class="stat-value">${DB_TOTAL_TARGET.toLocaleString()}<span class="stat-unit">套</span></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">剩餘套數</div>
-        <div class="stat-value yellow">${Math.max(0, remaining).toLocaleString()}<span class="stat-unit">套</span></div>
+      <div class="stat-card" style="flex:1;display:flex;flex-direction:column;padding:1rem 1rem;">
+        <div class="stat-label" style="margin-bottom:0.8rem;">整體完成率</div>
+        <div style="position:relative;width:130px;height:130px;margin:0 auto;">
+          <canvas id="donutChart" width="130" height="130" style="cursor:pointer;"></canvas>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+            <span style="font-family:'DM Mono',monospace;font-size:1.4rem;font-weight:600;color:${color};">${overallPct}<span style="font-size:0.65rem;color:var(--text-dim);margin-left:1px;">%</span></span>
+          </div>
+          <div id="donutTooltip" style="display:none;position:absolute;left:115%;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.97);border:1px solid var(--border);border-radius:8px;padding:0.7rem 1rem;font-size:0.78rem;white-space:nowrap;box-shadow:0 2px 8px rgba(139,111,94,0.15);z-index:10;color:var(--text);">
+            <div style="margin-bottom:0.3rem;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:6px;"></span>已拍完套數：${totalDone.toLocaleString()}</div>
+            <div style="margin-bottom:0.3rem;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ebe6e1;margin-right:6px;border:1px solid #d0c8c0;"></span>剩餘套數：${remaining.toLocaleString()}</div>
+            <div style="color:var(--text-dim);font-size:0.72rem;margin-top:0.4rem;padding-top:0.4rem;border-top:1px solid var(--border);">目標總套數：${DB_TOTAL_TARGET.toLocaleString()}</div>
+          </div>
+        </div>
       </div>`;
-    document.getElementById('statsTitle').textContent = '26FW';
+    document.getElementById('statsTitle').textContent = '';
+
+    requestAnimationFrame(() => {
+      const canvas = document.getElementById('donutChart');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const cx = 65, cy = 65, r = 50, lineW = 14;
+      const pct = Math.min(overallPct / 100, 1);
+      const startAngle = -Math.PI / 2;
+
+      function draw() {
+        ctx.clearRect(0, 0, 130, 130);
+        // Track
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ebe6e1';
+        ctx.lineWidth = lineW;
+        ctx.stroke();
+        // Progress
+        if (pct > 0) {
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, startAngle, startAngle + Math.PI * 2 * pct);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = lineW;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+        }
+      }
+      draw();
+
+      const tooltip = document.getElementById('donutTooltip');
+      canvas.addEventListener('mouseenter', () => { tooltip.style.display = 'block'; });
+      canvas.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+    });
 
     const tbody = document.getElementById('tableBody');
     tbody.innerHTML = rows.map(r => {
